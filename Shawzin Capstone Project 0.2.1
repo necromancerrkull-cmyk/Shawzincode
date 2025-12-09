@@ -1,0 +1,128 @@
+# ============================
+# Shawzin Capstone Project
+# ============================
+
+# Mapping tokens → plaintext
+Key = {
+    'B':'A', 'J':'B', 'R':'C', 'h':'D', 'Z':'E', 'x':'F', 'p':'G',
+    '5':'H', 'C':'I', 'K':'J', 'S':'K', 'i':'L', 'a':'M', 'y':'N',
+    'q':'O', '6':'P', 'E':'Q', 'M':'R', 'U':'S', 'k':'T', 'c':'U',
+    '0':'V', 's':'W', '8':'XYZ', 'GJ':'1', 'GZ':'2', 'G5':'3',
+    'EK5':'4', 'Ea5':'5', 'E7':'6', 'M7':'7', 'c7':'8', '/':'9',
+    'H':'0', 'F':'!', 'EJ':'@', 'ER':'#', 'Eh':'$', 'EZ':'%',
+    'Ex':'^', 'Ep':'&', 'E5':'*', 'BM':'(', 'N':')', 'MR':'-',
+    'Mh':'_', 'MZ':'=', 'Mx':'+', 'Mp':'[', 'M5':'{', 'BU':']',
+    'JU':'}', 'Uh':'|', 'ZU':';', 'Ux':':', '5U':'"', 'Bk':',',
+    'Jk':'<', 'Rk':'.', 'I':'>', 'Zk':'/', 'xk':'?', 'pk':'`',
+    '5k':'~'
+}
+
+# Reverse mapping plaintext → tokens
+RevKey = {}
+for k, v in Key.items():
+    if len(v) == 1:
+        RevKey[v] = k
+    else:
+        for ch in v:
+            RevKey[ch] = k
+
+# Placement sequence
+alphabet = list("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+
+def next_pair(pair):
+    """Advance two-letter placement pair."""
+    first, second = pair[0], pair[1]
+    idx_second = alphabet.index(second)
+    if idx_second < len(alphabet) - 1:
+        return first + alphabet[idx_second + 1]
+    idx_first = alphabet.index(first)
+    if idx_first < len(alphabet) - 1:
+        return alphabet[idx_first + 1] + alphabet[0]
+    return alphabet[0] + alphabet[0]
+
+def split_fragments(code):
+    """Split encoded string into 3-character fragments."""
+    s = code.strip()
+    if s.startswith("(") and s.endswith(")"):
+        s = s[1:-1]
+    if len(s) % 3 != 0:
+        raise ValueError("Invalid fragment length.")
+    return [s[i:i+3] for i in range(0, len(s), 3)]
+
+def merge_fragments(frags):
+    """Combine fragments that share the same placement pair."""
+    merged = []
+    i = 0
+    while i < len(frags):
+        cur = frags[i]
+        if i + 1 < len(frags):
+            nxt = frags[i + 1]
+            if cur[1:] == nxt[1:]:
+                merged.append(cur[0] + nxt[0])
+                i += 2
+                continue
+        merged.append(cur[0])
+        i += 1
+    return merged
+
+def unmask(code):
+    """Decode Shawzin → plaintext."""
+    frags = split_fragments(code)
+    mains = merge_fragments(frags)
+    result = ""
+    for m in mains:
+        if m in Key:
+            result += Key[m]
+        else:
+            for ch in m:
+                if ch in Key:
+                    result += Key[ch]
+                else:
+                    raise ValueError(f"Unknown token '{m}'.")
+    return result
+
+def mask(message):
+    """Encode plaintext → Shawzin."""
+    pair = "AA"
+    out = "("
+    for ch in message:
+        if ch not in RevKey:
+            raise ValueError(f"Cannot encode '{ch}'.")
+        key_str = RevKey[ch]
+        for t in key_str:
+            out += t + pair
+        pair = next_pair(pair)
+    out += ")"
+    return out
+
+def main():
+    """Menu interface."""
+    while True:
+        print("\n=== Shawzin Encoder/Decoder ===")
+        print("1) Unmask (Shawzin → Text)")
+        print("2) Mask (Text → Shawzin)")
+        print("3) Exit")
+        choice = input("Select: ").strip()
+
+        if choice == "1":
+            code = input("Enter Shawzincode: ").strip()
+            try:
+                print("Decoded message:\n", unmask(code))
+            except Exception as e:
+                print("Error:", e)
+
+        elif choice == "2":
+            msg = input("Enter message to encode: ").strip()
+            try:
+                print("Shawzincode:\n", mask(msg))
+            except Exception as e:
+                print("Error:", e)
+
+        elif choice == "3":
+            break
+
+        else:
+            print("Invalid choice.")
+
+if __name__ == "__main__":
+    main()
